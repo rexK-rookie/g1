@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <title>漢威數學向量 - 射擊遊戲</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game-container">
+    <h1>漢威數學 打爆飛碟</h1>
+    <section class="stats">
+      <div class="score">分數: <span id="score">0</span></div>
+      <div class="level">關卡: <span id="level">1</span></div>
+    </section>
+    <canvas id="gameCanvas"></canvas>
+    <section class="controls">
+      <button id="startButton">開始遊戲</button>
+      <button id="exitButton">離開遊戲</button>
+    </section>
+    <section class="arrow-controls">
+      <button id="upButton">↑</button>
+      <div class="horizontal-arrows">
+        <button id="leftButton">←</button>
+        <button id="rightButton">→</button>
+      </div>
+      <button id="downButton">↓</button>
+    </section>
+    <section class="instructions">
+      <h2>操作說明</h2>
+      <p>使用鍵盤方向鍵或下方按鈕控制射擊方向：</p>
+      <ul>
+        <li>↑：向上射擊</li>
+        <li>↓：向下射擊</li>
+        <li>←：向左射擊</li>
+        <li>→：向右射擊</li>
+      </ul>
+      <p>子彈會受到重力影響，目標會移動，難度隨關卡提升！</p>
+    </section>
+  </main>
+  <script src="script.js" defer></script> <!-- 使用 defer 確保 DOM 加載完成 -->
+</body>
+</html>

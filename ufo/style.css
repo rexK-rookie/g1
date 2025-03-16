@@ -1,0 +1,120 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  overflow: hidden;
+  touch-action: none; /* 防止觸控縮放 */
+}
+
+.game-container {
+  text-align: center;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 1.5vmin;
+  border-radius: 0.625rem;
+  box-shadow: 0 0 0.625rem rgba(255, 255, 255, 0.1);
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.game-container h1 {
+  color: #ffd700;
+  font-family: 'Courier New', Courier, monospace;
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.8);
+  font-size: 5vmin;
+  animation: flicker 2s infinite;
+}
+
+canvas {
+  border: 1px solid #fff;
+  background-color: rgba(0, 0, 0, 0.5);
+  width: 90vmin;
+  height: 60vmin;
+  max-width: 100%;
+  max-height: 70vh;
+  margin: 0 auto;
+  display: block;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-around;
+  font-size: 3vmin;
+  color: #fff;
+}
+
+.controls, .arrow-controls {
+  margin: 1vmin 0;
+  display: flex;
+  justify-content: center;
+  gap: 2vmin;
+}
+
+.arrow-controls {
+  flex-direction: column;
+  align-items: center;
+}
+
+.horizontal-arrows {
+  display: flex;
+  gap: 2vmin;
+}
+
+button {
+  padding: 2vmin;
+  font-size: 3vmin;
+  cursor: pointer;
+  color: #fff;
+  border: none;
+  border-radius: 0.5vmin;
+  transition: background-color 0.3s;
+  min-width: 10vmin;
+  min-height: 10vmin;
+}
+
+#startButton { background-color: #007bff; }
+#startButton:hover { background-color: #0056b3; }
+#exitButton { background-color: #28a745; }
+#exitButton:hover { background-color: #218838; }
+#upButton, #downButton, #leftButton, #rightButton {
+  background-color: #666;
+  font-size: 5vmin;
+}
+#upButton:hover, #downButton:hover, #leftButton:hover, #rightButton:hover {
+  background-color: #888;
+}
+
+.instructions {
+  margin: 2vmin;
+  text-align: left;
+  color: #fff;
+  font-size: 2.5vmin;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.star {
+  position: absolute;
+  background-color: #fff;
+  border-radius: 50%;
+  animation: twinkle 1s infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.5); }
+}
+
+@media (orientation: portrait) {
+  canvas { height: 50vmin; }
+  button { min-width: 15vmin; min-height: 15vmin; }
+}
