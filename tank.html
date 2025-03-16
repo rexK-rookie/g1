@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tank Shooting Game</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+        #game-container {
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        #powerBar {
+            width: 100px;
+            height: 20px;
+            border: 2px solid black;
+            display: inline-block;
+        }
+        #powerFill {
+            height: 100%;
+            background: red;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div>Score: <span id="score">0</span></div>
+        <div>Power: <div id="powerBar"><div id="powerFill" style="width: 0%;"></div></div></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const WIDTH = canvas.width;
+        const HEIGHT = canvas.height;
+
+        // 遊戲物件
+        class Tank {
+            constructor() {
+                this.x = 100;
+                this.baseWidth = 60;
+                this.baseHeight = 30;
+                this.turretLength = 40;
+                this.angle = 45;
+                this.speed = 5;
+            }
+
+            move(direction) {
+                this.x += direction * this.speed;
+                this.x = Math.max(this.baseWidth/2, Math.min(WIDTH - this.baseWidth/2, this.x));
+            }
+
+            rotateTurret(angleChange) {
+                this.angle = Math.max(0, Math.min(90, this.angle + angleChange));
+            }
+
+            draw() {
+                const groundY = getGroundHeight(this.x);
+                ctx.fillStyle = 'gray';
+                ctx.fillRect(this.x - this.baseWidth/2, groundY - this.baseHeight, 
+                           this.baseWidth, this.baseHeight);
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                const turretEndX = this.x + Math.cos(this.angle * Math.PI/180) * this.turretLength;
+                const turretEndY = groundY - this.baseHeight/2 - Math.sin(this.angle * Math.PI/180) * this.turretLength;
+                ctx.moveTo(this.x, groundY - this.baseHeight/2);
+                ctx.lineTo(turretEndX, turretEndY);
+                ctx.stroke();
+            }
+        }
+
+        class Bullet {
+            constructor(x, y, angle, power) {
+                this.x = x;
+                this.y = y;
+                this.angle = angle;
+                this.velocity = power * 20;
+                this.vx = Math.cos(angle * Math.PI/180) * this.velocity;
+                this.vy = -Math.sin(angle * Math.PI/180) * this.velocity;
+                this.bounces = 0;
+                this.trail = []; // 儲存軌跡
+            }
+
+            update() {
+                this.vx *= 0.99;
+                this.vy += 1;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.trail.push({x: this.x, y: this.y});
+
+                const groundY = getGroundHeight(this.x);
+                if (this.y >= groundY) {
+                    this.y = groundY;
+                    this.vy = -this.vy * 0.7;
+                    this.bounces++;
+                }
+            }
+
+            draw() {
+                // 畫軌跡
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i < this.trail.length; i++) {
+                    if (i === 0) ctx.moveTo(this.trail[i].x, this.trail[i].y);
+                    else ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                }
+                ctx.stroke();
+
+                // 畫子彈
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 第二次落地爆炸效果
+                if (this.bounces === 2) {
+                    ctx.fillStyle = 'orange';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        class Target {
+            constructor() {
+                this.respawn();
+            }
+
+            respawn() {
+                this.x = Math.random() * (WIDTH - 250) + 200;
+                this.y = getGroundHeight(this.x) - 20;
+            }
+
+            draw() {
+                ctx.fillStyle = 'red';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 地面生成
+        const terrain = [];
+        function generateTerrain() {
+            let height = HEIGHT * 3/4;
+            for (let x = 0; x < WIDTH; x++) {
+                height += Math.random() * 4 - 2;
+                height = Math.max(HEIGHT/2, Math.min(HEIGHT-50, height));
+                terrain[x] = height;
+            }
+        }
+
+        function getGroundHeight(x) {
+            return terrain[Math.min(Math.max(0, Math.floor(x)), WIDTH-1)];
+        }
+
+        // 遊戲初始化
+        generateTerrain();
+        const tank = new Tank();
+        const bullets = [];
+        const targets = Array(5).fill().map(() => new Target());
+        let score = 0;
+        let power = 0;
+        const keys = {};
+
+        // 鍵盤控制
+        document.addEventListener('keydown', (e) => keys[e.key] = true);
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+            if (e.key === ' ' && power > 0) {
+                const bulletX = tank.x + Math.cos(tank.angle * Math.PI/180) * tank.turretLength;
+                const bulletY = getGroundHeight(tank.x) - tank.baseHeight/2 - Math.sin(tank.angle * Math.PI/180) * tank.turretLength;
+                bullets.push(new Bullet(bulletX, bulletY, tank.angle, power));
+                score -= 1; // 發射子彈扣1分
+                power = 0;
+            }
+        });
+
+        // 主遊戲迴圈
+        function gameLoop() {
+            // 處理輸入
+            if (keys['ArrowLeft']) tank.move(-1);
+            if (keys['ArrowRight']) tank.move(1);
+            if (keys['ArrowUp']) tank.rotateTurret(1);
+            if (keys['ArrowDown']) tank.rotateTurret(-1);
+            if (keys[' ']) power = Math.min(power + 0.05, 1);
+
+            // 更新子彈
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].update();
+                if (bullets[i].bounces >= 2 || bullets[i].x < 0 || bullets[i].x > WIDTH) {
+                    bullets.splice(i, 1);
+                    continue;
+                }
+                
+                // 檢查碰撞
+                for (let j = targets.length - 1; j >= 0; j--) {
+                    const dx = bullets[i].x - targets[j].x;
+                    const dy = bullets[i].y - targets[j].y;
+                    if (Math.sqrt(dx*dx + dy*dy) < 15) {
+                        targets.splice(j, 1);
+                        bullets.splice(i, 1);
+                        score += 10; // 擊中標靶加10分
+                        break;
+                    }
+                }
+            }
+
+            // 重新生成標靶
+            if (targets.length === 0) {
+                targets.push(...Array(5).fill().map(() => new Target()));
+            }
+
+            // 繪製
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+            // 畫地面
+            ctx.fillStyle = 'green';
+            ctx.beginPath();
+            ctx.moveTo(0, HEIGHT);
+            for (let x = 0; x < WIDTH; x++) {
+                ctx.lineTo(x, terrain[x]);
+            }
+            ctx.lineTo(WIDTH, HEIGHT);
+            ctx.fill();
+
+            tank.draw();
+            bullets.forEach(bullet => bullet.draw());
+            targets.forEach(target => target.draw());
+
+            // 更新 UI
+            document.getElementById('score').textContent = score;
+            document.getElementById('powerFill').style.width = (power * 100) + '%';
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>

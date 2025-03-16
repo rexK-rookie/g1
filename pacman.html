@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Math Pac-Man Game</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid white;
+        }
+        #game-container {
+            position: relative;
+            text-align: center;
+        }
+        #question, #score, #timer {
+            position: absolute;
+            color: white;
+            font-size: 20px;
+        }
+        #question { top: -40px; left: 0; width: 100%; }
+        #score { top: -40px; right: 20px; }
+        #timer { top: -40px; left: 20px; }
+        #buttons {
+            margin-top: 20px;
+        }
+        button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="question"></div>
+        <div id="score">Score: 0</div>
+        <div id="timer">Time: 60</div>
+        <canvas id="gameCanvas" width="500" height="500"></canvas>
+        <div id="buttons">
+            <button onclick="startGame()">Start</button>
+            <button onclick="stopGame()">Stop</button>
+            <button onclick="nextQuestion()">Next Question (-10)</button>
+            <button onclick="showHint()">Hint</button>
+        </div>
+    </div>
+
+    <audio id="backgroundMusic" loop>
+        <source src="https://www.myinstants.com/media/sounds/pacman-theme.mp3" type="audio/mp3">
+    </audio>
+    <audio id="chompSound">
+        <source src="https://www.myinstants.com/media/sounds/pacman-chomp.mp3" type="audio/mp3">
+    </audio>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gridSize = 50; // 每個點的間距
+        const dotRadius = 3;
+        const pacmanRadius = 10;
+        const ghostRadius = 10;
+        const ghostColors = ['red', 'blue', 'green', 'pink'];
+
+        let pacman = { x: 5, y: 5, mouthAngle: 0, direction: 'right' }; // 使用 mouthAngle 來控制張合
+        let ghosts = [];
+        let dots = [];
+        let score = 0;
+        let timeLeft = 60;
+        let gameActive = false;
+        let gameLoop, timerLoop, ghostLoop;
+        let question = '';
+        let answer = 0;
+        let answerGhostIndex = -1;
+        let hintActive = false;
+
+        const backgroundMusic = document.getElementById('backgroundMusic');
+        const chompSound = document.getElementById('chompSound');
+
+        // 初始化點陣
+        function initDots() {
+            dots = [];
+            for (let i = 0; i < 10; i++) {
+                for (let j = 0; j < 10; j++) {
+                    dots.push({ x: i, y: j });
+                }
+            }
+        }
+
+        // 隨機生成題目
+        function generateQuestion() {
+            const ops = ['+', '-', '*', '/'];
+            const op = ops[Math.floor(Math.random() * ops.length)];
+            let a, b;
+            do {
+                a = Math.floor(Math.random() * 10);
+                b = Math.floor(Math.random() * 10);
+                if (op === '/' && b === 0) b = 1; // 避免除以0
+                if (op === '/') answer = Math.floor(a / b);
+                else if (op === '*') answer = a * b;
+                else if (op === '+') answer = a + b;
+                else if (op === '-') answer = a - b;
+            } while (answer > 100 || answer < 0 || (op === '/' && a % b !== 0));
+
+            question = `${a} ${op} ${b} = ?`;
+            document.getElementById('question').textContent = question;
+
+            // 重置幽靈
+            ghosts = [];
+            for (let i = 0; i < 4; i++) {
+                let ghost;
+                do {
+                    ghost = {
+                        x: Math.floor(Math.random() * 10),
+                        y: Math.floor(Math.random() * 10)
+                    };
+                } while (Math.abs(ghost.x - pacman.x) <= 3 && Math.abs(ghost.y - pacman.y) <= 3);
+                ghost.number = (i === 0) ? answer : Math.floor(Math.random() * 100) + 1;
+                ghosts.push(ghost);
+            }
+            answerGhostIndex = 0; // 答案永遠在第一個幽靈，之後會隨機打亂
+            ghosts = ghosts.sort(() => Math.random() - 0.5); // 打亂幽靈順序
+            answerGhostIndex = ghosts.findIndex(g => g.number === answer);
+        }
+
+        // 繪製遊戲
+        function draw() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 繪製點陣
+            ctx.fillStyle = 'yellow';
+            dots.forEach(dot => {
+                ctx.beginPath();
+                ctx.arc(dot.x * gridSize + gridSize / 2, dot.y * gridSize + gridSize / 2, dotRadius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 繪製吃豆人
+            ctx.fillStyle = 'yellow';
+            ctx.beginPath();
+            const maxMouthAngle = Math.PI / 4; // 嘴巴最大張開角度
+            const mouthAngle = Math.abs(Math.sin(pacman.mouthAngle)) * maxMouthAngle; // 使用正弦波讓張合更自然
+            let startAngle, endAngle;
+
+            // 根據方向設定嘴巴的起始和結束角度
+            if (pacman.direction === 'right') {
+                startAngle = mouthAngle;
+                endAngle = 2 * Math.PI - mouthAngle;
+            } else if (pacman.direction === 'left') {
+                startAngle = Math.PI + mouthAngle;
+                endAngle = Math.PI - mouthAngle;
+            } else if (pacman.direction === 'up') {
+                startAngle = 1.5 * Math.PI + mouthAngle;
+                endAngle = 1.5 * Math.PI - mouthAngle;
+            } else if (pacman.direction === 'down') {
+                startAngle = 0.5 * Math.PI + mouthAngle;
+                endAngle = 0.5 * Math.PI - mouthAngle;
+            }
+
+            ctx.arc(pacman.x * gridSize + gridSize / 2, pacman.y * gridSize + gridSize / 2, pacmanRadius, startAngle, endAngle);
+            ctx.lineTo(pacman.x * gridSize + gridSize / 2, pacman.y * gridSize + gridSize / 2);
+            ctx.fill();
+
+            // 繪製幽靈
+            ghosts.forEach((ghost, index) => {
+                ctx.fillStyle = ghostColors[index];
+                if (hintActive && index === answerGhostIndex) {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = 'white';
+                }
+                ctx.beginPath();
+                ctx.arc(ghost.x * gridSize + gridSize / 2, ghost.y * gridSize + gridSize / 2, ghostRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = 'white';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(ghost.number, ghost.x * gridSize + gridSize / 2, ghost.y * gridSize + gridSize / 2 + 5);
+            });
+
+            // 更新分數和時間
+            document.getElementById('score').textContent = `Score: ${score}`;
+            document.getElementById('timer').textContent = `Time: ${timeLeft}`;
+        }
+
+        // 移動幽靈
+        function moveGhosts() {
+            ghosts.forEach(ghost => {
+                const directions = ['up', 'down', 'left', 'right'];
+                const dir = directions[Math.floor(Math.random() * directions.length)];
+                if (dir === 'up' && ghost.y > 0) ghost.y--;
+                else if (dir === 'down' && ghost.y < 9) ghost.y++;
+                else if (dir === 'left' && ghost.x > 0) ghost.x--;
+                else if (dir === 'right' && ghost.x < 9) ghost.x++;
+            });
+        }
+
+        // 檢查碰撞
+        function checkCollision() {
+            ghosts.forEach((ghost, index) => {
+                if (ghost.x === pacman.x && ghost.y === pacman.y) {
+                    if (index === answerGhostIndex) {
+                        score += 100;
+                        alert('Correct! +100 points');
+                    } else {
+                        score -= 50;
+                        alert('Wrong! -50 points');
+                    }
+                    generateQuestion();
+                }
+            });
+        }
+
+        // 遊戲主循環
+        function gameLoopFunc() {
+            pacman.mouthAngle += 0.2; // 控制嘴巴張合速度
+            checkCollision();
+            draw();
+        }
+
+        // 計時器循環
+        function timerLoopFunc() {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                stopGame();
+                alert(`Game Over! Final Score: ${score}`);
+            }
+        }
+
+        // 開始遊戲
+        function startGame() {
+            if (gameActive) return;
+            gameActive = true;
+            score = 0;
+            timeLeft = 60;
+            initDots();
+            generateQuestion();
+            pacman = { x: 5, y: 5, mouthAngle: 0, direction: 'right' };
+            gameLoop = setInterval(gameLoopFunc, 100); // 加快遊戲循環以使嘴巴動畫更流暢
+            timerLoop = setInterval(timerLoopFunc, 1000);
+            ghostLoop = setInterval(moveGhosts, 1000);
+            backgroundMusic.play();
+        }
+
+        // 停止遊戲
+        function stopGame() {
+            gameActive = false;
+            clearInterval(gameLoop);
+            clearInterval(timerLoop);
+            clearInterval(ghostLoop);
+            backgroundMusic.pause();
+        }
+
+        // 下一題
+        function nextQuestion() {
+            if (!gameActive) return;
+            score -= 10;
+            generateQuestion();
+        }
+
+        // 提示
+        function showHint() {
+            if (!gameActive) return;
+            hintActive = true;
+            setTimeout(() => hintActive = false, 2000);
+        }
+
+        // 鍵盤控制
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            if (e.key === 'ArrowUp' && pacman.y > 0) {
+                pacman.y--;
+                pacman.direction = 'up';
+                chompSound.play();
+            } else if (e.key === 'ArrowDown' && pacman.y < 9) {
+                pacman.y++;
+                pacman.direction = 'down';
+                chompSound.play();
+            } else if (e.key === 'ArrowLeft' && pacman.x > 0) {
+                pacman.x--;
+                pacman.direction = 'left';
+                chompSound.play();
+            } else if (e.key === 'ArrowRight' && pacman.x < 9) {
+                pacman.x++;
+                pacman.direction = 'right';
+                chompSound.play();
+            }
+        });
+
+        // 初始化遊戲
+        initDots();
+        draw();
+    </script>
+</body>
+</html>
