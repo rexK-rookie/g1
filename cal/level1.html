@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第一關：函數森林</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>第一關：函數森林</h1>
+        <p>選擇一個函數並觀察積分面積 \( F(x) = \int_{0}^{x} f(t) \, dt \)</p>
+        <select id="functionSelect">
+            <option value="x^2">f(x) = x²</option>
+            <option value="x">f(x) = x</option>
+            <option value="sin(x)">f(x) = sin(x)</option>
+        </select>
+        <input type="range" id="xRange" min="0" max="5" step="0.1" value="2">
+        <canvas id="chart"></canvas>
+        <p id="areaResult"></p>
+        <button onclick="checkLevel1()">提交</button>
+        <button onclick="window.location.href='level2.html'">下一題</button>
+        <button onclick="window.location.href='index.html'">離開</button>
+    </div>
+    <script src="level1.js"></script>
+</body>
+</html>

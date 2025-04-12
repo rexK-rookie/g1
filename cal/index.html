@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微積分探險家</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>微積分探險家</h1>
+        <p>漢威數理研究室</p>
+        <button onclick="window.location.href='level1.html'">第一關：函數森林</button>
+        <button onclick="window.location.href='level2.html'">第二關：差商之路</button>
+        <button onclick="window.location.href='level3.html'">第三關：積分中值定理</button>
+        <button onclick="window.location.href='level4.html'">第四關：極限山脈</button>
+        <button onclick="window.location.href='../index.html'">回主頁</button>
+    </div>
+    
+    <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+    </script>
+</body>
+</html>
