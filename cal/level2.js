@@ -19,8 +19,8 @@ function updateChart() {
     document.getElementById('diffQuotient').textContent = `撌桀�: ${(F_xh - F_x).toFixed(2)} / ${h} = ${diff.toFixed(2)} (頞刻�� f(${x}) = ${x * x})`;
 
     const areaData = data.filter(d => d.x >= x && d.x <= x + h); // 蝛滚������ [x, x+h]
-    areaData.unshift({ x: x, y: 0 }); // 敺� (x, 0) ��见��
-    areaData.push({ x: x + h, y: 0 }); // ��𧼮� (x+h, 0)
+    areaData.unshift({ x: x, y: 0 }); // 從 (x, 0) 回到
+    areaData.push({ x: x + h, y: 0 }); // 回到 (x+h, 0)
 
     if (chart) chart.destroy();
     chart = new Chart(ctx, {
